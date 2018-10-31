@@ -1,0 +1,85 @@
+---
+title: "French given names per year per department"
+author: "Lucas Mello Schnorr, Jean-Marc Vincent"
+date: "October, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Using the [given names data
+set of INSEE](https://www.insee.fr/fr/statistiques/fichier/2540004/dpt2017_txt.zip), answer some of the following questions:
+
+- First name frequency evolves along time?
+- What can we say about "the french version of your name here" (for each state, all the country)?
+- Is there some sort of geographical correlation with the data?
+- Which state has a larger variety of names along time?
+- _your own question_ (be creative)
+
+You need to use the _dplyr_ and _magrittr_ for this analysis. Read in R with this code. Note that you might need to install the `readr` package with the appropriate command.
+
+```{r}
+file = "dpt2017_txt.zip"
+if(!file.exists(file)){
+  download.file("https://www.insee.fr/fr/statistiques/fichier/2540004/dpt2017_txt.zip",
+	destfile=file)
+}
+unzip(file)
+```
+
+```{r}
+library(readr);
+df <- read_tsv("dpt2017.txt", locale = locale(encoding = "ISO-8859-1"), col_types=cols(
+  sexe = col_integer(),
+  preusuel = col_character(),
+  annais = col_character(),
+  dpt = col_character(),
+  nombre = col_integer()
+));
+df;
+```
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+```
+
+Loaded library.
+
+Trying to answer the following question:
+- Does First name frequency evolve along time?
+
+```{r}
+df %>% group_by(preusuel,annais) %>% summarize(count = sum(nombre)) %>% filter(preusuel != "_PRENOMS_RARES") %>% arrange(as.integer(annais)) %>% ggplot(aes(x=as.integer(annais), y=count)) + geom_point() + geom_line()
+```
+
+Clearly, the frequency of all names is more homogeneous now.
+
+Second question: what can you say about Francis/Francois?
+
+```{r}
+df %>%filter(preusuel == "FRANCIS") %>% group_by(preusuel,annais) %>% summarize(count = sum(nombre)) %>%  arrange(annais) %>% ggplot(aes(x=as.integer(annais), y=count)) + geom_point() + geom_line()
+```
+
+Francis is a somewhat rare name in France, with a peak of popularity in the 50's (perhaps due to Francis Ford Coppola's "The Grandfather" movie?)
+
+```{r}
+df %>% filter(preusuel == "FRANCIS") %>% group_by(dpt,annais) %>% summarize(count = sum(nombre)) %>%
+arrange(annais) %>% ggplot(aes(x=as.integer(dpt), y=count)) + geom_point()
+```
+
+The name "Francis" fairly more frequent in 2 state departments
+
+Which state has a larger variety of names along time?
+
+```{r}
+df %>% group_by(dpt,annais) %>% summarize(count = n()) %>% arrange(annais) %>% ggplot(aes(x=as.integer(annais), y=count, color(dpt))) + geom_point()
+```
+
+```{r}
+df %>% group_by(dpt,annais) %>% summarize(count = n()) %>% arrange(annais) %>% ggplot(aes(x=as.integer(annais), y=count, color(dpt))) + geom_point()
+```
+

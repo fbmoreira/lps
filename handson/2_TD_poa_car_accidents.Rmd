@@ -1,0 +1,144 @@
+---
+title: "R_lps_2"
+author: "Francis Moreira"
+date: "October 31, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+open file:
+
+```{r}
+file = "acidentes-2003.csv"
+if(!file.exists(file)){
+  download.file("http://www.opendatapoa.com.br/storage/f/2013-11-06T17%3A38%3A06.476Z/acidentes-2003.csv",
+	destfile=file)
+}
+```
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(magrittr)
+library(ggplot2)
+```
+
+
+```{r}
+library(readr);
+df <- read_delim("acidentes-2003.csv", delim=";", locale = locale(encoding = "ISO-8859-1"))
+```
+
+
+Data summary:
+
+```{r pressure, echo=FALSE}
+df %>% summary()
+```
+
+Question:
+Is there a time of the year with more accidents?
+To verify this, we will observe the sum of accidents in each month, then plot with x axis month and y axis count.
+
+
+```{r pressure, echo=FALSE}
+df %>% group_by(MES) %>% summarize(count = n()) %>% ggplot(aes(x=as.integer(MES), y=count)) + geom_point() + geom_line()
+```
+
+In the year of 2003, December had more accidents than any other month.
+
+Second question:
+
+How many vehicles are usually involved?
+
+To answer this, we need to obtain either the mean or the median.
+Either way, we must sum all vehicle columns.
+This will likely be a Poisson distribution, or I guess so...
+
+1. create new column with sum of all vehicle columns
+2. calculate mode
+
+Instead of 
+
+```{r}
+dd <- df %>% mutate(vehicles = AUTO + TAXI + LOTACAO + ONIBUS_URB + ONIBUS_INT + CAMINHAO + MOTO + CARROCA + BICICLETA + OUTRO)
+
+vec <- as.vector(dd['vehicles'])
+sort(-table(vec))
+
+```
+
+Instead of calculating the mode, we just tabled the vector with the sum of vehicles, and then sorted into descending order to find which is the most common number of vehicles in an accident (2).
+
+
+Third Question:
+
+Is there a specific weekday with more accidents? 
+
+Group by weekday, sum instances. However, what is significantly "more"?
+
+```{r}
+df %>% group_by(DIA_SEM) %>% summarize(count = n())
+```
+
+We can see that Friday is the day with the largest number of reported accidents.
+
+Final question:
+
+Advanced: are there some area in POA with more accidents?
+An area can be a neighborhood, an intersection. Define precisely what is your region in your Rmd.
+
+What is a region? A neighborhood? Or whatever is defined in the table?
+
+Looking at the table definition:
+
+```{r}
+
+df %>% group_by(REGIAO) %>% summarize(count = n())
+
+```
+
+The north region has more accidents than other regions.
+However, if we want to specify the region further and look specifically for dangerous crossings or streets, we could analyze the following: street x street, where NA for the second street declares a single street (i.e. not a crossing).
+
+
+```{r}
+
+df %>% group_by(LOG1,LOG2) %>% summarize(count = sum(CONT_ACID)) %>% arrange(-count)
+
+```
+
+As we can see, in 2003 Av ASSIS BRASIL is a very dangerous street. 
+The problem is: avenues are loooooong!
+
+Can we specify regions using LAT and LONG?
+
+
+
+
+
+
