@@ -485,18 +485,92 @@ propLong;
 
 so, we can use 0.0027 for lat,
 and 0.0031 for long to define our 300m^2 squares.
+There will be rounding errors, but I think we are fine with a few meters off.
 
 
 Now let's get down and dirty. We want to create new groups of latitude and longitude which represent our square regions, then sum the number of accidents per region.
 
+```{r}
+MINLAT <- df %>% select(LATITUDE) %>% min() 
+MINLONG <- df %>% select(LONGITUDE) %>% min()
+MINLONG;
+
+da <- df %>% mutate(index1 = as.integer((LATITUDE - MINLAT) / propLat))
+db <- da %>% mutate(index2 = as.integer((LONGITUDE - MINLONG) / propLong))
+
+db %>% group_by(index1, index2) %>% summarize(count = n()) %>% arrange(count) %>% tail(5)
+```
+
+OK so, we got some 300m^2 regions with a lot of accidents! Is this granularity too thick? Maybe we should scale down to 30m^2...
+But first, I am curious... can we put some street names on these big counts?
+
+```{r}
+db %>% group_by(index1,index2) %>% arrange(index1,index2) %>% select(LOG1)
+```
 
 
+Wait, what's going on? How did we get those huge index1 before?
+
+```{r}
+db %>% select(index1) %>% summary
+```
+
+Oh... Rstudio limits us to see 100 pages, or 1000 rows... oh well, let's filter it
+
+```{r}
+db %>% group_by(index1,index2) %>% filter(index1 == 65) %>% filter(index2 == 25) %>% arrange(index1,index2) %>% select(LOG1)
+db %>% group_by(index1,index2) %>% filter(index1 == 71) %>% filter(index2 == 16) %>% arrange(index1,index2) %>% select(LOG1)
+```
 
 
+so 65 25 is AV Bento Goncalves close to the crossing with Av Cel Aparicio Borges (and Cel Jose Rodrigues Sobral), and 71 16 is Av Ipiranga close to the crossing with Av da Azenha and Joao Pessoa and ... ok holy shit 300m^2 is way too large. Down to 30m^2 we go!
 
 
+```{r}
+propLat = 30/111120;
+propLat;
+```
+
+```{r}
+propLong = 30/(111120 * cos(-30*pi/180));
+propLong;
+```
+
+basically you divide by 10 from the previous values...
 
 
+```{r}
+MINLAT <- df %>% select(LATITUDE) %>% min() 
+MINLONG <- df %>% select(LONGITUDE) %>% min()
+MINLONG;
+
+da <- df %>% mutate(index1 = as.integer((LATITUDE - MINLAT) / propLat))
+db <- da %>% mutate(index2 = as.integer((LONGITUDE - MINLONG) / propLong))
+
+db %>% group_by(index1, index2) %>% summarize(count = n()) %>% arrange(count) %>% tail(5)
+```
+
+ok, now we must have some more specific avenues.
+
+```{r}
+db %>% group_by(index1,index2) %>% filter(index1 == 729) %>% filter(index2 == 193) %>% arrange(index1,index2) %>% select(LOG1,LOG2)
+db %>% group_by(index1,index2) %>% filter(index1 == 759) %>% filter(index2 == 254) %>% arrange(index1,index2) %>% select(LOG1,LOG2)
+db %>% group_by(index1,index2) %>% filter(index1 == 676) %>% filter(index2 == 257) %>% arrange(index1,index2) %>% select(LOG1,LOG2)
+```
+
+That's actually incredible. The region where Av Nilopolis changes to Dr. Nilo Pecanha has 83 accidents alone in 2003! This is a huge crossing where the Carazinho Street also changes to Carlos Trein Filho street. I know this because I happen to live nearby! I say it is incredible because it is very well signaled, and I have never personally seen an accident there (living there since march/2018)
+
+But the region with the most accidents is still Av Ipiranga, in the crossing with the Silva So street. This is another well-known access point to the center of the city. This analysis ends up to be equal to the sum of all accidents in this specific crossing.
+
+Interestingly, the Av Nilopolis/Nilo Pecanha region would have its accidents split, and thus would not show as an interesting point. But through a latitude/longitude analysis, we were able to pick it up!
+
+The third region with most occurrences in the database also has ambiguous street names for the crossing.
+Unlike the other crossings, this crossing between Av Ipiranga and Dr Salvador Franca street has a bus corridor. Some occurrences are marked with LOG1 as AC B TREVO IPIRANGA SALVADOR, which corresponds to a return street used in the region as well, which is not counted as the crossing.
+
+The entire problem with this analysis lies on this: what is the circulation in each region?! If a region has 0 vehicles circulating in it, then it will have 0 accidents. The regions we obtained with this analysis have the highest car traffic in the city! No wonder will they also have more accidents! Is there an estimation of car traffic in each region so we can make a proportional estimate of the rate of accidents per circulating vehicle??? 
+
+The question of what are the highest accident count regions has been succesfully answered.
+But are the regions we obtained interesting? Perhaps a more interesting question is: what are the regions more prone to accidents when taking into account the proportion of vehicles circulating in it? If we had the data to analyze that, perhaps we could improve signaling and/or traffic law enforcement in these regions.
 
 
 
