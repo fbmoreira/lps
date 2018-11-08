@@ -574,7 +574,72 @@ But are the regions we obtained interesting? Perhaps a more interesting question
 
 
 
+I am curious about more recent data...
+
+```{r}
+file = "acidentes-2016.csv"
+if(!file.exists(file)){
+  download.file("http://datapoa.com.br/storage/f/2017-08-03T13%3A19%3A45.538Z/acidentes-2016.csv",
+	destfile=file)
+}
+```
 
 
 
+```{r}
+df <- read_delim("acidentes-2016.csv", ";")
+summary(df)
+spec(df)
+```
 
+oh crap, the table format changed! They now use "." to separate the fractions in latitude and longitude...
+
+```{r}
+df <- read_delim("acidentes-2016.csv", ";", col_types = list(ID = col_integer(),
+  LONGITUDE = col_character(),
+  LATITUDE = col_character(),
+  LOG1 = col_character(),
+  LOG2 = col_character(),
+  PREDIAL1 = col_integer(),
+  LOCAL = col_character(),
+  TIPO_ACID = col_character(),
+  LOCAL_VIA = col_character(),
+  QUEDA_ARR = col_integer(),
+  DATA = col_date(format = ""),
+  DATA_HORA = col_datetime(format = ""),
+  DIA_SEM = col_character(),
+  HORA = col_time(format = ""),
+  FERIDOS = col_integer(),
+  FERIDOS_GR = col_integer(),
+  MORTES = col_integer(),
+  MORTE_POST = col_integer(),
+  FATAIS = col_integer(),
+  AUTO = col_integer(),
+  TAXI = col_integer(),
+  LOTACAO = col_integer(),
+  ONIBUS_URB = col_integer(),
+  ONIBUS_MET = col_integer(),
+  ONIBUS_INT = col_integer(),
+  CAMINHAO = col_integer(),
+  MOTO = col_integer(),
+  CARROCA = col_integer(),
+  BICICLETA = col_integer(),
+  OUTRO = col_integer(),
+  TEMPO = col_character(),
+  NOITE_DIA = col_character(),
+  FONTE = col_character(),
+  BOLETIM = col_character(),
+  REGIAO = col_character(),
+  DIA = col_integer(),
+  MES = col_integer(),
+  ANO = col_integer(),
+  FX_HORA = col_integer(),
+  CONT_ACID = col_integer(),
+  CONT_VIT = col_integer(),
+  UPS = col_integer(),
+  CONSORCIO = col_character(),
+  CORREDOR = col_integer()))
+summary(df)
+```
+
+REMINDER: Maybe I should use entropy for my categorical analysis in my security work..

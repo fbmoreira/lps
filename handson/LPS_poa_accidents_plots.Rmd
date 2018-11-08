@@ -1,0 +1,104 @@
+---
+title: "LPS_poa_accidents_plots"
+author: "Francis Moreira"
+date: "November 8, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+
+This is a summary of the "2_TD_poa_car_accidents.Rmd" file, focused on plots.
+
+First, let's load the libraries:
+
+```{r}
+library("tidyverse")
+```
+
+
+Now let's load the file
+```{r}
+file = "acidentes-2003.csv"
+if(!file.exists(file)){
+  download.file("http://www.opendatapoa.com.br/storage/f/2013-11-06T17%3A38%3A06.476Z/acidentes-2003.csv",
+	destfile=file)
+}
+
+df <- read_csv2("acidentes-2003.csv")
+summary(df)
+```
+
+Question 1:
+Is there a time of the year with more accidents?
+First, we provide a definition for "time" as a month,
+so the question becomes "Is there a month of the year with more accidents?".
+
+To verify this, we will observe the sum of accidents in each month, then plot with x axis month and y axis count.
+
+```{r pressure, echo=FALSE}
+df %>% group_by(MES) %>% summarize(count = n()) %>% ggplot(aes(x=as.integer(MES), y=count)) + geom_bar(stat="identity") + labs(x = "Month of the year", y = "number of reported accidents", title = "Number of reported accidents in Porto Alegre per month of the year 2003") + scale_x_discrete(limits=c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")) + theme_bw() + scale_y_continuous(breaks=c(0,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000),limits=c(0,2000))
+```
+
+As we can see, December has the largest number of reported accidents.
+The difference is not very significant when compared to May, July, August, and October.
+February had significantly less accident reports than other months.
+
+
+Question 2:
+
+How many vehicles are usually involved?
+
+Instead of calculating the mode, we just tabled the vector with the sum of vehicles, and then sorted into descending order to find which is the most common number of vehicles in an accident (2).
+
+```{r}
+dd <- df %>% mutate(vehicles = AUTO + TAXI + LOTACAO + ONIBUS_URB + ONIBUS_INT + CAMINHAO + MOTO + CARROCA + BICICLETA + OUTRO)
+vec <- as.vector(dd['vehicles'])
+
+dvec <- as.data.frame(table(vec))
+
+dvec %>% ggplot(aes(x=vec,y=Freq)) + geom_bar(stat='identity') + labs(x = "Number of Vehicles Involved in Accident", y = "Number of Accidents", title = "Distribution of number of Vehicles involved in Accidents in Porto Alegre, 2003") + theme_bw() + scale_y_continuous(breaks=c(0,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000,11000,12000,13000,14000,15000,16000,17000),limits=c(0,17000))
+
+```
+
+Here we can see that the mode of the distribution is "2", i.e. there were usually two vehicles involved in car accidents in Porto Alegre, 2003.
+
+Question 3:
+
+Is there a specific weekday with more accidents? 
+
+Group by weekday, sum instances. However, what is significantly "more"?
+
+```{r}
+#df$day <- factor(df$day,levels = c("Fri", "Sat", "Sun", "Thur"))
+
+df %>% group_by(DIA_SEM) %>% summarize(count = n()) %>% ggplot(aes(x= fct_relevel(DIA_SEM, "SEGUNDA-FEIRA", "TERCA-FEIRA", "QUARTA-FEIRA", "QUINTA-FEIRA", "SEXTA-FEIRA", "SABADO", "DOMINGO"),y=count)) + geom_bar(stat='identity') + labs(x = "Week day", y = "Number of Accidents", title = "Distribution of Accidents per weekday in Porto Alegre, 2003") + theme_bw() + scale_y_continuous(breaks=c(0,1500,2000,2500,3000,3500,4000),limits=c(0,4000))
+
+```
+
+We can see that Friday ("SEXTA-FEIRA") is the day with the largest number of reported accidents.
+
+
