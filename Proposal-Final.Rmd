@@ -49,19 +49,11 @@ df_classification <- read_csv("cjpeg_classification_traces.csv")
 
 ```
 
-
-note: DO NOT SAVE R DATA!!! These tables are huge, and will take a long time to load, regardless on whether you save the data on R or not.
-
-So let's pose some questions from the proposal.
-
-First, "Is there any phase in all of the inputs with a different combination of
+First Question: "Is there any phase in all of the inputs with a different combination of
 "Number of Basic Block executions" and "Number of Unique Basic Block
 executions" which is NOT found in S?"
 
-Basically, we need to group by phase, and check for each phase in the classification df whether a "number of unique BBLs" in the phase exists for that phase in the training df.
-
 First, let's observe the behavior:
-
 ```{r}
 library(ggplot2)
 
@@ -69,8 +61,8 @@ disttrain <- df_train %>% group_by(srcbbl,destbbl) %>% distinct(numuniqbbls) %>%
 
 disttrain %>% ggplot(aes(x=phase_id, y=count)) + geom_col() + theme_bw() + 
   labs(x = "CBBT phases", 
-       y = "Number of False Positives",
-       title = "False Positives using number of unique BBLs to characterize normal behavior") +
+       y = "Number of Distinct Unique BBL Counts",
+       title = "Distinct counts of unique BBLs in all classification executions each phase") +
        theme(axis.ticks.x = element_blank(),
              axis.text.x = element_blank(),
              panel.grid.major.x = element_blank()) +
@@ -80,7 +72,7 @@ disttrain %>% ggplot(aes(x=phase_id, y=count)) + geom_col() + theme_bw() +
 
 ```
 
-woah, some phases have a very large number of different behaviors... 
+Some phases have a very large number of different behaviors... 
 
 Now before we run the full table, we can facilitate this a bit. We only care whether a phase behavior is present in classification and not present in train, so we don't care about repetition at all. Furthermore, the question asks about the number of unique bbls, so we can drop the number of bbls column:
 
@@ -93,7 +85,7 @@ Much smaller! So this should run much faster!
 
 ```{r}
 test <- setdiff(summ_classification,summ_train)
-test;
+nrow(test);
 ```
 
 58 rows in classification do not show up in training.
@@ -111,8 +103,7 @@ That's a large number of phases deviating from the training behavior!
 Therefore, we need to be a bit less restrictive.
 Does any phase in the classification have a number of unique bbls larger than the MAXIMUM found during training?
 
-We can now reduce summ_train to the maximum value of each phase.
-
+We reduce summ_train to the maximum value of each phase.
 ```{r}
 max_train <- summ_train %>% group_by(srcbbl,destbbl) %>% filter (numuniqbbls == max(numuniqbbls)) %>% arrange(srcbbl,destbbl,numuniqbbls)
 ```
@@ -124,12 +115,8 @@ To work on the same table, it's better to rename the column on one table and joi
 ```{r}
 max_train <- max_train %>% dplyr::rename(maxuniqbbls = numuniqbbls)
 dummy <- left_join(summ_classification,max_train ) 
-```
-
-
-```{r}
 test <- dummy %>% filter(numuniqbbls > maxuniqbbls)
-test
+nrow(test)
 ```
 
 Here we can see that there were 23 instances in the classification traces of phases where the number of unique bbls was larger than what was detected in that phase during training.
@@ -158,7 +145,7 @@ test %>% mutate(diff = numuniqbbls - maxuniqbbls) %>% mutate(id = paste(srcbbl,d
         scale_x_discrete()
 ```
 
-Most phases have a very small deviation, which is probably within some noise of the phase.
+Most phases have a small deviation, which is probably within some noise of the phase.
 However, a few phases have a high difference, which cannot be explained by noise alone.
 
 Second question:
@@ -166,19 +153,9 @@ Second question:
 Is there any phase sequence P1 - P2 in all of the inputs which is not seen
 in S?
 
-First, we have to create new columns with the phase that comes after it.
 ```{r}
 seqclass <- df_classification %>% mutate( seqsrcbbl = lead(srcbbl) ) %>% mutate(seqdestbbl = lead(destbbl))
-```
-
-
-```{r}
 seqtrain <- df_train %>% mutate ( seqsrcbbl = lead(srcbbl)) %>% mutate(seqdestbbl = lead(destbbl))
-```
-
-Now we can reduce the datasets to the different phases which follow a given phase:
-
-```{r}
 difftrainphase <- seqtrain %>% group_by(srcbbl,destbbl) %>% select(-c(numbbls,numuniqbbls)) %>% distinct()
 diffclassphase <- seqclass %>% group_by(srcbbl,destbbl) %>% select(-c(numbbls,numuniqbbls)) %>% distinct()
 ```
@@ -206,7 +183,7 @@ now the question becomes: is there a phase sequence in classification which is n
 
 ```{r}
 anoms <- setdiff(diffclassphase,difftrainphase)
-anoms
+nrow(anoms)
 ```
 
 Thus we obtain 20 different phase sequences which appear in the classification traces but do not appear in the training traces.
@@ -236,14 +213,15 @@ largedf <- left_join(seqclass,dummy)
 
 ```{r}
 test <- largedf %>% filter(numuniqbbls > maxuniqbbls) %>% select(-c(numbbls,numuniqbbls,maxuniqbbls)) %>% setdiff(difftrainphase)
-test
+nrow(test)
 ```
 
 Thus we have a single phase with 2 different anomalous behavior instances.
 
 False positive ratio:
 ```{r}
-thirdit <- 1/totphases
+anphases <- test %>% group_by(srcbbl,destbbl) %>% select(-c(seqsrcbbl,seqdestbbl)) %>% distinct() %>% nrow()
+thirdit <- anphases/totphases
 thirdit
 ```
 

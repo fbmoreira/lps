@@ -79,16 +79,15 @@ Basically, we need to group by phase, and check for each phase in the classifica
 First, let's observe the behavior a bit:
 
 ```{r}
+```{r}
 library(ggplot2)
 
 disttrain <- df_train %>% group_by(srcbbl,destbbl) %>% distinct(numuniqbbls) %>% dplyr::summarize(count = n()) %>% mutate(phase_id = paste(srcbbl,destbbl))
 
-disttrain
-
 disttrain %>% ggplot(aes(x=phase_id, y=count)) + geom_col() + theme_bw() + 
   labs(x = "CBBT phases", 
-       y = "Number of False Positives",
-       title = "False Positives using number of unique BBLs to characterize normal behavior") +
+       y = "Number of Distinct Unique BBL Counts",
+       title = "Distinct counts of unique BBLs in all classification executions each phase") +
        theme(axis.ticks.x = element_blank(),
              axis.text.x = element_blank(),
              panel.grid.major.x = element_blank()) +
@@ -97,6 +96,7 @@ disttrain %>% ggplot(aes(x=phase_id, y=count)) + geom_col() + theme_bw() +
         scale_x_discrete()
 
 ```
+
 
 woah, some phases have a very large number of different behaviors... just confirming though:
 
