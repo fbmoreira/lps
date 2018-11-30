@@ -587,7 +587,7 @@ if(!file.exists(file)){
 
 
 ```{r}
-df <- read_delim("acidentes-2016.csv", ";")
+df <- read.delim("acidentes-2016.csv", header = T, sep = ";", dec = ",")
 summary(df)
 spec(df)
 ```
