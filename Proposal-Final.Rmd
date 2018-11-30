@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 This is an R markdown document to work on the analysis of CBBT(Critical Basic Block Transition)-defined phases on the jpeg compression application (cjpeg) from miBench, using Fursin et al's set of inputs. To obtain the files, we must first install the googledrive package to download (it might ask you for a code after a login in googledrive):
 ```{r}
-install.packages("googledrive")
+install.packages("googledrive", repos = "https://github.com/cran/googledrive")
 ```
 
 ```{r}
@@ -49,36 +49,23 @@ df_classification <- read_csv("cjpeg_classification_traces.csv")
 
 ```
 
-let's analyze the data to make sure it has been correctly parsed:
-
-```{r}
-head(df_classification)
-summary(df_classification)
-```
-
-
-```{r}
-head(df_train)
-summary(df_train)
-```
 
 note: DO NOT SAVE R DATA!!! These tables are huge, and will take a long time to load, regardless on whether you save the data on R or not.
 
 So let's pose some questions from the proposal.
+
 First, "Is there any phase in all of the inputs with a different combination of
 "Number of Basic Block executions" and "Number of Unique Basic Block
 executions" which is NOT found in S?"
 
 Basically, we need to group by phase, and check for each phase in the classification df whether a "number of unique BBLs" in the phase exists for that phase in the training df.
 
-First, let's observe the behavior a bit:
+First, let's observe the behavior:
 
 ```{r}
 library(ggplot2)
 
 disttrain <- df_train %>% group_by(srcbbl,destbbl) %>% distinct(numuniqbbls) %>% dplyr::summarize(count = n()) %>% mutate(phase_id = paste(srcbbl,destbbl))
-
-disttrain
 
 disttrain %>% ggplot(aes(x=phase_id, y=count)) + geom_col() + theme_bw() + 
   labs(x = "CBBT phases", 
@@ -103,44 +90,21 @@ summ_train <- df_train %>% group_by(srcbbl,destbbl)  %>% select(-c(numbbls)) %>%
 ```
 
 Much smaller! So this should run much faster!
-First let's check data integrity:
-
-```{r}
-summary(summ_classification)
-```
-
-```{r}
-summary(summ_train)
-```
-
-seems ok, some slight differences.. let's run the code now:
 
 ```{r}
 test <- setdiff(summ_classification,summ_train)
 test;
 ```
 
-whoa! 58 rows in classification do not show up in training.
-We can check an individual row with match_df from plyr:
-
-```{r}
-library(plyr)
-rowtofind <- data.frame(srcbbl=4278115,destbbl=4278140, numuniqbbls=105)
-match_df(summ_train,rowtofind)
-match_df(summ_classification,rowtofind)
-```
-
+58 rows in classification do not show up in training.
 As we can see, the training set does not exhibit all the behaviors that a phase can express in the cjpeg application.
-What is the percentage of false positives?
+What is the percentage of anomalous phases out of all phases?
 
-```{r}
-58/nrow(df_classification)
-```
-But if we consider out of the number of phases...
 ```{r}
 anphases <- test %>% select(-c(numuniqbbls)) %>% distinct() %>% nrow()
 totphases <- summ_classification %>% select(-c(numuniqbbls)) %>% distinct() %>% nrow()
 zeroit <- anphases/totphases;
+zeroit;
 ```
 
 That's a large number of phases deviating from the training behavior!
@@ -151,9 +115,6 @@ We can now reduce summ_train to the maximum value of each phase.
 
 ```{r}
 max_train <- summ_train %>% group_by(srcbbl,destbbl) %>% filter (numuniqbbls == max(numuniqbbls)) %>% arrange(srcbbl,destbbl,numuniqbbls)
-
-max_train;
-
 ```
 
 
@@ -163,7 +124,6 @@ To work on the same table, it's better to rename the column on one table and joi
 ```{r}
 max_train <- max_train %>% dplyr::rename(maxuniqbbls = numuniqbbls)
 dummy <- left_join(summ_classification,max_train ) 
-max_train
 ```
 
 
@@ -177,9 +137,10 @@ Here we can see that there were 23 instances in the classification traces of pha
 ```{r}
 anphases <-test %>% group_by(srcbbl,destbbl) %>% select(srcbbl,destbbl) %>% distinct() %>% nrow()
 firstit <- anphases/totphases
+firstit
 ```
 
-10% of the phases have a number of unique bbls larger than what has been seen during training.
+10% of the phases, at some point, exhibit a number of unique bbls larger than what has been seen during training.
 
 By how much did they exceed the threshold found in the training?
 
@@ -207,25 +168,19 @@ in S?
 
 First, we have to create new columns with the phase that comes after it.
 ```{r}
-
 seqclass <- df_classification %>% mutate( seqsrcbbl = lead(srcbbl) ) %>% mutate(seqdestbbl = lead(destbbl))
-seqclass
 ```
 
 
 ```{r}
 seqtrain <- df_train %>% mutate ( seqsrcbbl = lead(srcbbl)) %>% mutate(seqdestbbl = lead(destbbl))
-seqtrain
 ```
 
 Now we can reduce the datasets to the different phases which follow a given phase:
 
 ```{r}
 difftrainphase <- seqtrain %>% group_by(srcbbl,destbbl) %>% select(-c(numbbls,numuniqbbls)) %>% distinct()
-difftrainphase
-
 diffclassphase <- seqclass %>% group_by(srcbbl,destbbl) %>% select(-c(numbbls,numuniqbbls)) %>% distinct()
-diffclassphase
 ```
 
 What is the "fan-out" (distinct following phases) of each phase?
@@ -255,16 +210,11 @@ anoms
 ```
 
 Thus we obtain 20 different phase sequences which appear in the classification traces but do not appear in the training traces.
-False positive ratio regarding all CBBT-phase executions:
-
-```{r}
-20/nrow(df_classification)
-```
-
 False positive ratio regarding all distinct phases:
 ```{r}
 anphases <- anoms %>% group_by(srcbbl,destbbl) %>% select(-c(seqsrcbbl,seqdestbbl)) %>% distinct() %>% nrow()
 secondit <- anphases/totphases
+secondit
 ```
 
 Only slightly better than deviation from max number of uniq bbls.
@@ -281,7 +231,6 @@ Basically, we have to merge the above codes:
 
 ```{r}
 largedf <- left_join(seqclass,dummy)
-largedf
 ```
 
 
@@ -295,9 +244,10 @@ Thus we have a single phase with 2 different anomalous behavior instances.
 False positive ratio:
 ```{r}
 thirdit <- 1/totphases
+thirdit
 ```
 
-
+False positive ratio of all methods
 ```{r}
 falsepos_df <- data.frame(falsepos = c(zeroit,firstit,secondit,thirdit),
                           type = c("#unique bbls",">max trained #unique bbls","phase sequence","combined" ))

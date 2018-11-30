@@ -37,7 +37,7 @@ Now let's download the files to make sure we have them in the working directory:
 file = "cjpeg_training_behavior_traces.csv"
 if(!file.exists(file)){
   drive_download(as_id("18RQQqtCNTa6S6xqT7aCBM60n5xTiGdlH"), path = "cjpeg_training_behavior_traces.csv.gz")
-  gunzip("cjpeg_training_behavior_traces.csv.gz")
+  system("gunzip cjpeg_training_behavior_traces.csv.gz")
 }
 
 df_train <- read_csv("cjpeg_training_behavior_traces.csv")
@@ -45,7 +45,7 @@ df_train <- read_csv("cjpeg_training_behavior_traces.csv")
 file = "cjpeg_classification_traces.csv"
 if(!file.exists(file)){
   drive_download(as_id("19mNVHccpYbPqNvETajMrjUcnQq6AG3ZU"), path = "cjpeg_classification_traces.csv.gz")
-  gunzip("cjpeg_training_behavior_traces.csv.gz")
+  system("gunzip cjpeg_classification_traces.csv.gz")
 }
 
 df_classification <- read_csv("cjpeg_classification_traces.csv")
