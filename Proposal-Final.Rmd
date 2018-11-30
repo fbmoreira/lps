@@ -11,7 +11,15 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## R Markdown
 
-This is an R markdown document to work on the analysis of CBBT(Critical Basic Block Transition)-defined phases on the jpeg compression application (cjpeg) from miBench, using Fursin et al's set of inputs.
+This is an R markdown document to work on the analysis of CBBT(Critical Basic Block Transition)-defined phases on the jpeg compression application (cjpeg) from miBench, using Fursin et al's set of inputs. To obtain the files, we must first install the googledrive package to download (it might ask you for a code after a login in googledrive):
+```{r}
+install.packages("googledrive")
+```
+
+```{r}
+library("googledrive")
+```
+
 First, let's load the libraries:
 
 ```{r}
@@ -25,23 +33,21 @@ Now let's download the files to make sure we have them in the working directory:
 ```{r}
 file = "cjpeg_training_behavior_traces.csv"
 if(!file.exists(file)){
-  download.file("http://www.opendatapoa.com.br/storage/f/2013-11-06T17%3A38%3A06.476Z/acidentes-2003.csv",
-	destfile=file)
+  drive_download(as_id("18RQQqtCNTa6S6xqT7aCBM60n5xTiGdlH"), path = "cjpeg_training_behavior_traces.csv.gz", overwrite = TRUE)
+  system("gunzip cjpeg_training_behavior_traces.csv.gz")
 }
 
 df_train <- read_csv("cjpeg_training_behavior_traces.csv")
 
 file = "cjpeg_classification_traces.csv"
 if(!file.exists(file)){
-  download.file("http://www.opendatapoa.com.br/storage/f/2013-11-06T17%3A38%3A06.476Z/acidentes-2003.csv",
-	destfile=file)
+  drive_download(as_id("19mNVHccpYbPqNvETajMrjUcnQq6AG3ZU"), path = "cjpeg_classification_traces.csv.gz", overwrite = TRUE)
+  system("gunzip cjpeg_classification_traces.csv.gz")
 }
 
 df_classification <- read_csv("cjpeg_classification_traces.csv")
 
-
 ```
-
 
 let's analyze the data to make sure it has been correctly parsed:
 
